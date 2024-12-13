@@ -174,7 +174,7 @@ class FlockingIntelligence(Intelligence):
         # For leader_bias = 1.0: weight range is [0.5, 1.5]
         # For leader_bias = 2.0: weight range is [0.1, 1.9]
         # For leader_bias = 4.0: weight range is [0.01, 1.99]
-        min_weight = 1.0 / (1.0 + self.leader_bias)
+        min_weight = 1.0 / (1.0 + self.weights['leader_bias'])
         max_weight = 2.0 - min_weight
         weight = min_weight + (max_weight - min_weight) * (alignment + 1) / 2
         
@@ -185,7 +185,7 @@ class FlockingIntelligence(Intelligence):
                       world_size: Tuple[float, float], **kwargs) -> np.ndarray:
         if not neighbors:
             # If no neighbors, just avoid walls
-            wall_force = self._wall_avoidance(position, velocity, world_size) * self.wall_avoidance_weight
+            wall_force = self._wall_avoidance(position, velocity, world_size) * self.weights['wall_avoidance']
             return np.clip(wall_force, -self.max_force, self.max_force)
         
         # Get neighbors within separation radius (subset of all neighbors)
@@ -195,10 +195,10 @@ class FlockingIntelligence(Intelligence):
         ]
             
         # Calculate flocking forces
-        cohesion = self._cohesion(position, velocity, neighbors) * self.cohesion_weight
-        alignment = self._alignment(position, velocity, neighbors) * self.alignment_weight
-        separation = self._separation(position, close_neighbors) * self.separation_weight
-        wall_force = self._wall_avoidance(position, velocity, world_size) * self.wall_avoidance_weight
+        cohesion = self._cohesion(position, velocity, neighbors) * self.weights['cohesion']
+        alignment = self._alignment(position, velocity, neighbors) * self.weights['alignment']
+        separation = self._separation(position, close_neighbors) * self.weights['separation']
+        wall_force = self._wall_avoidance(position, velocity, world_size) * self.weights['wall_avoidance']
         
         # Combine forces
         total_force = cohesion + alignment + separation + wall_force

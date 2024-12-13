@@ -1,4 +1,5 @@
 import argparse
+from src.registry import SCENARIOS, INTELLIGENCES, get_choices
 from src.scenarios.free_roam import FreeRoamScenario
 from src.intelligences.flocking import FlockingIntelligence
 from src.core.simulation import Simulation
@@ -6,9 +7,9 @@ from src.core.simulation import Simulation
 def main():
     parser = argparse.ArgumentParser(description='Run swarm simulation with different scenarios and intelligences')
     # Scenario parameters
-    parser.add_argument('--scenario', default='free_roam', choices=['free_roam'],
+    parser.add_argument('--scenario', default='free_roam', choices=get_choices(SCENARIOS),
                       help='Scenario to run (default: free_roam)')
-    parser.add_argument('--intelligence', default='flocking', choices=['flocking'],
+    parser.add_argument('--intelligence', default='flocking', choices=get_choices(INTELLIGENCES),
                       help='Intelligence type to use (default: flocking)')
     parser.add_argument('--num-bots', type=int, default=30,
                       help='Number of bots to simulate (default: 30)')
@@ -45,19 +46,9 @@ def main():
     
     args = parser.parse_args()
     
-    # Map scenario names to classes
-    scenarios = {
-        'free_roam': FreeRoamScenario
-    }
-    
-    # Map intelligence names to classes
-    intelligences = {
-        'flocking': FlockingIntelligence
-    }
-    
     # Create scenario and simulation
-    scenario_class = scenarios[args.scenario]
-    intelligence_class = intelligences[args.intelligence]
+    scenario_class = SCENARIOS[args.scenario]
+    intelligence_class = INTELLIGENCES[args.intelligence]
     
     # Configure intelligence with parameters
     def create_intelligence():
