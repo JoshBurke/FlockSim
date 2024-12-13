@@ -27,8 +27,8 @@ class FreeRoamScenario(Scenario):
             bots.append((position, velocity))
         return bots
     
-    def get_scenario_params(self) -> Dict[str, Any]:
-        """Get scenario-specific parameters.
+    def get_specific_params(self) -> Dict[str, Any]:
+        """Get parameters specific to the free roam scenario.
         
         Returns:
             Empty dict as free roam has no special parameters

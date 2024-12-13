@@ -31,12 +31,18 @@ class Simulation:
         self.fig, self.ax = plt.subplots()
         self.ax.set_xlim(0, self.world_size[0])
         self.ax.set_ylim(0, self.world_size[1])
+        # Remove axis labels and ticks
+        self.ax.set_xticks([])
+        self.ax.set_yticks([])
         
     def update(self, frame):
         """Update simulation state and visualization."""
         self.ax.clear()
         self.ax.set_xlim(0, self.world_size[0])
         self.ax.set_ylim(0, self.world_size[1])
+        # Remove axis labels and ticks
+        self.ax.set_xticks([])
+        self.ax.set_yticks([])
         
         # Get current state of all bots
         all_states = [bot.get_state() for bot in self.bots]

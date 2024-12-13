@@ -33,7 +33,7 @@ class Bot:
             **kwargs
         )
         
-        # Apply force and update position
+        # Apply force and update velocity
         self.acceleration = force
         self.velocity += self.acceleration
         
@@ -42,11 +42,34 @@ class Bot:
         if speed > self.intelligence.max_speed:
             self.velocity = (self.velocity / speed) * self.intelligence.max_speed
             
-        self.position += self.velocity
+        # Calculate potential new position
+        new_position = self.position + self.velocity
         
-        # Wrap around world boundaries
-        self.position[0] %= world_size[0]
-        self.position[1] %= world_size[1]
+        # Handle world boundaries
+        enable_wrapping = kwargs.get('enable_wrapping', True)
+        if enable_wrapping:
+            # Wrap around edges
+            new_position[0] %= world_size[0]
+            new_position[1] %= world_size[1]
+        else:
+            # Check for collisions with boundaries and adjust position and velocity
+            for i in range(2):
+                if new_position[i] < 0:
+                    # Calculate how far past the boundary we would have gone
+                    overshoot = -new_position[i]
+                    # Place exactly at boundary
+                    new_position[i] = 0
+                    # Reverse velocity component and reduce by the fraction of movement that was stopped
+                    self.velocity[i] = -self.velocity[i] * (1.0 - overshoot/abs(self.velocity[i]))
+                elif new_position[i] >= world_size[i]:
+                    # Calculate how far past the boundary we would have gone
+                    overshoot = new_position[i] - world_size[i]
+                    # Place exactly at boundary
+                    new_position[i] = world_size[i]
+                    # Reverse velocity component and reduce by the fraction of movement that was stopped
+                    self.velocity[i] = -self.velocity[i] * (1.0 - overshoot/abs(self.velocity[i]))
+                    
+        self.position = new_position
         
         # Reset acceleration
         self.acceleration = np.zeros(2)
