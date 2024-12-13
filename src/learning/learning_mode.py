@@ -8,25 +8,9 @@ from datetime import datetime
 from ..scenarios.base import Scenario
 from ..intelligences.base import Intelligence
 from ..core.headless_simulation import HeadlessSimulation
-
-@dataclass
-class GenerationStats:
-    """Statistics for a single generation."""
-    generation: int
-    avg_fitness: float
-    max_fitness: float
-    min_fitness: float
-    best_weights: Dict[str, float]
-    
-    def to_dict(self) -> Dict:
-        """Convert stats to dictionary for saving."""
-        return {
-            'generation': self.generation,
-            'avg_fitness': self.avg_fitness,
-            'max_fitness': self.max_fitness,
-            'min_fitness': self.min_fitness,
-            'best_weights': self.best_weights
-        }
+from ..core.simulation import Simulation
+from .visualization import EvolutionVisualizer
+from .stats import GenerationStats
 
 class LearningMode:
     """Manages the evolution of bot intelligences."""
@@ -39,7 +23,8 @@ class LearningMode:
                  mutation_rate: float = 0.1,
                  mutation_range: float = 0.2,
                  elite_percentage: float = 0.1,
-                 tournament_size: int = 5):
+                 tournament_size: int = 5,
+                 visualize: bool = False):
         """Initialize learning mode.
         
         Args:
@@ -51,6 +36,7 @@ class LearningMode:
             mutation_range: Range of mutation effect
             elite_percentage: Percentage of top performers to keep unchanged
             tournament_size: Number of individuals in each tournament selection
+            visualize: Whether to show real-time visualization
         """
         self.scenario_class = scenario_class
         self.intelligence_class = intelligence_class
@@ -66,6 +52,9 @@ class LearningMode:
         
         # Create initial population
         self.population = self._create_initial_population()
+        
+        # Setup visualization if requested
+        self.visualizer = EvolutionVisualizer() if visualize else None
     
     def _create_initial_population(self) -> List[Intelligence]:
         """Create initial population with random weights."""
@@ -114,6 +103,10 @@ class LearningMode:
         )
         self.stats_history.append(stats)
         
+        # Update visualization if enabled
+        if self.visualizer:
+            self.visualizer.update(self.stats_history)
+        
         # Sort population by fitness
         sorted_indices = np.argsort(all_fitnesses)[::-1]
         self.population = [self.population[i] for i in sorted_indices]
@@ -157,23 +150,28 @@ class LearningMode:
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
         
-        for gen in range(num_generations):
-            stats = self.evolve_generation()
-            print(f"Generation {stats.generation}: "
-                  f"Avg={stats.avg_fitness:.3f}, "
-                  f"Max={stats.max_fitness:.3f}, "
-                  f"Min={stats.min_fitness:.3f}")
-            
-            if save_dir:
-                # Save generation stats
-                stats_file = os.path.join(save_dir, f"gen_{gen:04d}_stats.json")
-                with open(stats_file, 'w') as f:
-                    json.dump(stats.to_dict(), f, indent=2)
+        try:
+            for gen in range(num_generations):
+                stats = self.evolve_generation()
+                print(f"Generation {stats.generation}: "
+                      f"Avg={stats.avg_fitness:.3f}, "
+                      f"Max={stats.max_fitness:.3f}, "
+                      f"Min={stats.min_fitness:.3f}")
                 
-                # Save best weights
-                weights_file = os.path.join(save_dir, f"gen_{gen:04d}_best_weights.json")
-                with open(weights_file, 'w') as f:
-                    json.dump(stats.best_weights, f, indent=2)
+                if save_dir:
+                    # Save generation stats
+                    stats_file = os.path.join(save_dir, f"gen_{gen:04d}_stats.json")
+                    with open(stats_file, 'w') as f:
+                        json.dump(stats.to_dict(), f, indent=2)
+                    
+                    # Save best weights
+                    weights_file = os.path.join(save_dir, f"gen_{gen:04d}_best_weights.json")
+                    with open(weights_file, 'w') as f:
+                        json.dump(stats.best_weights, f, indent=2)
+        finally:
+            # Clean up visualization
+            if self.visualizer:
+                self.visualizer.close()
         
         return self.stats_history
     
@@ -184,4 +182,26 @@ class LearningMode:
         
         # Apply weights to all individuals
         for individual in self.population:
-            individual.set_weights(weights) 
+            individual.set_weights(weights)
+    
+    def demo_best_weights(self, weights_file: str, num_bots: int = 30) -> None:
+        """Run a visual demo of the scenario with the best weights.
+        
+        Args:
+            weights_file: Path to the weights file to load
+            num_bots: Number of bots to use in demo
+        """
+        # Load the weights
+        with open(weights_file, 'r') as f:
+            weights = json.load(f)
+        
+        # Create intelligence factory with these weights
+        def create_intelligence():
+            intelligence = self.intelligence_class()
+            intelligence.set_weights(weights)
+            return intelligence
+        
+        # Create and run visual simulation
+        scenario = self.scenario_class()
+        sim = Simulation(scenario, create_intelligence, num_bots)
+        sim.run() 

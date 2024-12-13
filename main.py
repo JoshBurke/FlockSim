@@ -1,5 +1,6 @@
 import argparse
 from src.registry import SCENARIOS, INTELLIGENCES, get_choices
+from src.utils.load_class import load_class
 from src.scenarios.free_roam import FreeRoamScenario
 from src.intelligences.flocking import FlockingIntelligence
 from src.core.simulation import Simulation
@@ -47,8 +48,8 @@ def main():
     args = parser.parse_args()
     
     # Create scenario and simulation
-    scenario_class = SCENARIOS[args.scenario]
-    intelligence_class = INTELLIGENCES[args.intelligence]
+    scenario_class = load_class(SCENARIOS[args.scenario])
+    intelligence_class = load_class(INTELLIGENCES[args.intelligence])
     
     # Configure intelligence with parameters
     def create_intelligence():
