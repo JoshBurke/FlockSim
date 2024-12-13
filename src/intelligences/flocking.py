@@ -1,6 +1,33 @@
 import numpy as np
-from typing import List, Tuple
+from typing import List, Tuple, Dict
+from dataclasses import dataclass
 from .base import Intelligence
+
+@dataclass
+class FlockingMetrics:
+    """Metrics specific to flocking behavior."""
+    # Cohesion metrics
+    avg_distance_to_center: float = 0.0
+    flock_spread: float = 0.0
+    
+    # Alignment metrics
+    avg_velocity_alignment: float = 0.0
+    velocity_consistency: float = 0.0
+    
+    # Separation metrics
+    min_neighbor_distance: float = float('inf')
+    separation_violations: int = 0
+    
+    # Wall interaction
+    wall_collisions: int = 0
+    wall_distance: float = 0.0
+    
+    # Group dynamics
+    flock_size: float = 0.0
+    time_in_flock: int = 0
+    
+    # Tracking
+    update_count: int = 0
 
 class FlockingIntelligence(Intelligence):
     """Implementation of flocking behavior with cohesion, alignment, separation, and wall avoidance."""
@@ -31,13 +58,99 @@ class FlockingIntelligence(Intelligence):
             separation_radius: Distance at which separation force starts (should be <= perception_radius)
         """
         super().__init__(max_speed=max_speed, max_force=max_force, perception_radius=perception_radius)
-        self.cohesion_weight = cohesion_weight
-        self.alignment_weight = alignment_weight
-        self.separation_weight = separation_weight
-        self.wall_avoidance_weight = wall_avoidance_weight
+        # Initialize weights dictionary for evolution
+        self.weights = {
+            'cohesion': cohesion_weight,
+            'alignment': alignment_weight,
+            'separation': separation_weight,
+            'wall_avoidance': wall_avoidance_weight,
+            'leader_bias': leader_bias
+        }
         self.wall_detection_distance = wall_detection_distance
-        self.leader_bias = leader_bias
-        self.separation_radius = min(separation_radius, perception_radius)  # Ensure it's not larger than perception
+        self.separation_radius = min(separation_radius, perception_radius)
+        # Initialize fitness tracking
+        self.metrics = FlockingMetrics()
+        
+    def update_fitness_metrics(self,
+                             position: np.ndarray,
+                             velocity: np.ndarray,
+                             neighbors: List[Tuple[np.ndarray, np.ndarray]],
+                             world_size: Tuple[float, float]):
+        """Update flocking-specific fitness metrics."""
+        self.metrics.update_count += 1
+        
+        if neighbors:
+            # Calculate center of flock
+            positions = [n_pos for n_pos, _ in neighbors] + [position]
+            center = np.mean(positions, axis=0)
+            
+            # Update cohesion metrics
+            distances_to_center = [np.linalg.norm(pos - center) for pos in positions]
+            self.metrics.avg_distance_to_center = np.mean(distances_to_center)
+            self.metrics.flock_spread = np.std(distances_to_center)
+            
+            # Update alignment metrics
+            velocities = [n_vel for _, n_vel in neighbors] + [velocity]
+            avg_velocity = np.mean(velocities, axis=0)
+            if np.linalg.norm(avg_velocity) > 0:
+                alignments = [
+                    np.dot(vel, avg_velocity) / (np.linalg.norm(vel) * np.linalg.norm(avg_velocity))
+                    for vel in velocities if np.linalg.norm(vel) > 0
+                ]
+                self.metrics.avg_velocity_alignment = np.mean(alignments)
+            
+            # Update separation metrics
+            neighbor_distances = [np.linalg.norm(n_pos - position) for n_pos, _ in neighbors]
+            if neighbor_distances:
+                self.metrics.min_neighbor_distance = min(neighbor_distances)
+                self.metrics.separation_violations += sum(
+                    1 for d in neighbor_distances if d < self.separation_radius
+                )
+            
+            # Update group metrics
+            self.metrics.flock_size = len(neighbors)
+            self.metrics.time_in_flock += 1
+        
+        # Update wall metrics
+        wall_distances = [
+            position[0], world_size[0] - position[0],
+            position[1], world_size[1] - position[1]
+        ]
+        min_wall_dist = min(wall_distances)
+        self.metrics.wall_distance = min_wall_dist
+        if min_wall_dist <= 0:
+            self.metrics.wall_collisions += 1
+    
+    def calculate_fitness(self) -> float:
+        """Calculate fitness score for flocking behavior."""
+        if self.metrics.update_count == 0:
+            return 0.0
+            
+        # Calculate component scores (0 to 1)
+        cohesion_score = np.clip(1.0 - (self.metrics.avg_distance_to_center / self.perception_radius), 0, 1)
+        alignment_score = (self.metrics.avg_velocity_alignment + 1) / 2  # Convert from [-1,1] to [0,1]
+        separation_score = 1.0 - min(1.0, self.metrics.separation_violations / self.metrics.update_count)
+        wall_score = 1.0 - min(1.0, self.metrics.wall_collisions / 10)  # Allow up to 10 collisions
+        flock_score = self.metrics.time_in_flock / self.metrics.update_count
+        
+        # Weight the components
+        component_weights = {
+            'cohesion': 1.0,
+            'alignment': 1.2,
+            'separation': 1.5,
+            'wall_avoidance': 2.0,
+            'flocking': 1.3
+        }
+        
+        weighted_scores = [
+            cohesion_score * component_weights['cohesion'],
+            alignment_score * component_weights['alignment'],
+            separation_score * component_weights['separation'],
+            wall_score * component_weights['wall_avoidance'],
+            flock_score * component_weights['flocking']
+        ]
+        
+        return sum(weighted_scores) / sum(component_weights.values())
         
     def _calculate_influence_weight(self, velocity: np.ndarray, to_neighbor: np.ndarray) -> float:
         """Calculate how much influence a neighbor should have based on their relative position.
