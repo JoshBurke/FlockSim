@@ -130,7 +130,8 @@ def main():
         elite_percentage=args.elite_percentage,
         tournament_size=args.tournament_size,
         visualize=not args.no_visualization,
-        num_workers=args.num_workers
+        num_workers=args.num_workers,
+        save_dir=args.save_dir
     )
     
     # Run evolution

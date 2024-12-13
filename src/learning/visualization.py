@@ -1,15 +1,21 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from typing import List
+import os
+from typing import List, Optional
 from .stats import GenerationStats
 
 class EvolutionVisualizer:
     """Real-time visualization of evolution progress."""
     
-    def __init__(self):
-        """Initialize the visualizer."""
+    def __init__(self, save_dir: Optional[str] = None):
+        """Initialize the visualizer.
+        
+        Args:
+            save_dir: Directory to save progress plots (None = no saving)
+        """
         plt.ion()  # Enable interactive mode
         self.fig, (self.ax_fitness, self.ax_time) = plt.subplots(2, 1, figsize=(10, 8), height_ratios=[2, 1])
+        self.save_dir = save_dir
         
         # Setup fitness plot
         self.ax_fitness.set_title('Fitness Progress')
@@ -74,8 +80,23 @@ class EvolutionVisualizer:
         # Draw
         self.fig.canvas.draw()
         self.fig.canvas.flush_events()
+        
+        # Save progress plot if directory is specified
+        if self.save_dir:
+            # Save current progress plot
+            progress_file = os.path.join(self.save_dir, 'evolution_progress.png')
+            self.fig.savefig(progress_file, dpi=100, bbox_inches='tight')
+    
+    def save_final_plot(self):
+        """Save a high-quality final version of the plot."""
+        if self.save_dir:
+            # Save high-quality final plot
+            final_file = os.path.join(self.save_dir, 'evolution_final.png')
+            self.fig.savefig(final_file, dpi=300, bbox_inches='tight')
     
     def close(self):
-        """Close the visualization."""
+        """Save final plot and close visualization."""
+        if self.save_dir:
+            self.save_final_plot()
         plt.close(self.fig)
         plt.ioff()

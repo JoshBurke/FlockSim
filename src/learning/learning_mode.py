@@ -41,7 +41,8 @@ class LearningMode:
                  elite_percentage: float = 0.1,
                  tournament_size: int = 5,
                  visualize: bool = False,
-                 num_workers: Optional[int] = None):
+                 num_workers: Optional[int] = None,
+                 save_dir: Optional[str] = None):
         """Initialize learning mode.
         
         Args:
@@ -55,6 +56,7 @@ class LearningMode:
             tournament_size: Number of individuals in each tournament selection
             visualize: Whether to show real-time visualization
             num_workers: Number of parallel workers (None = use CPU count)
+            save_dir: Directory to save progress plots (None = no saving)
         """
         self.scenario_class = scenario_class
         self.intelligence_class = intelligence_class
@@ -72,7 +74,7 @@ class LearningMode:
         self.population = self._create_initial_population()
         
         # Setup visualization if requested
-        self.visualizer = EvolutionVisualizer() if visualize else None
+        self.visualizer = EvolutionVisualizer(save_dir) if visualize else None
         
         # Setup parallel processing
         self.num_workers = num_workers if num_workers is not None else mp.cpu_count()
