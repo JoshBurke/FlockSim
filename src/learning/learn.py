@@ -58,6 +58,10 @@ def main():
     parser.add_argument('--num-bots', type=int, default=30,
                       help='Number of bots to use in demo (default: 30)')
     
+    # Performance parameters
+    parser.add_argument('--num-workers', type=int, default=None,
+                      help='Number of parallel workers (default: number of CPU cores)')
+    
     # Visualization control
     parser.add_argument('--no-visualization', action='store_true',
                       help='Disable real-time visualization of evolution progress')
@@ -111,6 +115,8 @@ def main():
     print(f"- Elite percentage: {args.elite_percentage*100}%")
     print(f"- Mutation rate: {args.mutation_rate}")
     print(f"- Mutation range: ±{args.mutation_range*100}%")
+    if args.num_workers:
+        print(f"- Parallel workers: {args.num_workers}")
     print(f"\nSaving results to: {args.save_dir}")
     
     # Initialize learning mode
@@ -123,7 +129,8 @@ def main():
         mutation_range=args.mutation_range,
         elite_percentage=args.elite_percentage,
         tournament_size=args.tournament_size,
-        visualize=not args.no_visualization
+        visualize=not args.no_visualization,
+        num_workers=args.num_workers
     )
     
     # Run evolution

@@ -1,8 +1,9 @@
 import numpy as np
-from typing import List, Type, Dict, Tuple, Optional
+from typing import List, Type, Dict, Tuple, Optional, Callable
 import json
 import os
 import time
+import multiprocessing as mp
 from datetime import datetime
 
 from ..scenarios.base import Scenario
@@ -11,6 +12,21 @@ from ..core.headless_simulation import HeadlessSimulation
 from ..core.simulation import Simulation
 from .visualization import EvolutionVisualizer
 from .stats import GenerationStats
+
+def _evaluate_individual(args) -> float:
+    """Helper function to evaluate a single individual (must be top-level for pickling).
+    
+    Args:
+        args: Tuple of (scenario_class, intelligence, generation_frames)
+        
+    Returns:
+        Mean fitness across all bots
+    """
+    scenario_class, intelligence, generation_frames = args
+    scenario = scenario_class()
+    sim = HeadlessSimulation(scenario, lambda: intelligence)
+    fitnesses = sim.run(generation_frames)
+    return np.mean(fitnesses)
 
 class LearningMode:
     """Manages the evolution of bot intelligences."""
@@ -24,7 +40,8 @@ class LearningMode:
                  mutation_range: float = 0.2,
                  elite_percentage: float = 0.1,
                  tournament_size: int = 5,
-                 visualize: bool = False):
+                 visualize: bool = False,
+                 num_workers: Optional[int] = None):
         """Initialize learning mode.
         
         Args:
@@ -37,6 +54,7 @@ class LearningMode:
             elite_percentage: Percentage of top performers to keep unchanged
             tournament_size: Number of individuals in each tournament selection
             visualize: Whether to show real-time visualization
+            num_workers: Number of parallel workers (None = use CPU count)
         """
         self.scenario_class = scenario_class
         self.intelligence_class = intelligence_class
@@ -55,6 +73,16 @@ class LearningMode:
         
         # Setup visualization if requested
         self.visualizer = EvolutionVisualizer() if visualize else None
+        
+        # Setup parallel processing
+        self.num_workers = num_workers if num_workers is not None else mp.cpu_count()
+        self.pool = mp.Pool(processes=self.num_workers)
+    
+    def __del__(self):
+        """Cleanup pool on deletion."""
+        if hasattr(self, 'pool'):
+            self.pool.close()
+            self.pool.join()
     
     def _create_initial_population(self) -> List[Intelligence]:
         """Create initial population with random weights."""
@@ -85,15 +113,14 @@ class LearningMode:
         """Evolve one generation and return statistics."""
         start_time = time.time()
         
-        # Create scenario and simulation
-        scenario = self.scenario_class()
+        # Prepare evaluation arguments
+        eval_args = [
+            (self.scenario_class, individual, self.generation_frames)
+            for individual in self.population
+        ]
         
-        # Evaluate current population
-        all_fitnesses = []
-        for individual in self.population:
-            sim = HeadlessSimulation(scenario, lambda: individual)
-            fitnesses = sim.run(self.generation_frames)
-            all_fitnesses.append(np.mean(fitnesses))  # Use mean fitness of all bots
+        # Evaluate population in parallel
+        all_fitnesses = self.pool.map(_evaluate_individual, eval_args)
         
         # Get statistics
         stats = GenerationStats(
@@ -154,6 +181,8 @@ class LearningMode:
             os.makedirs(save_dir, exist_ok=True)
         
         try:
+            print(f"\nRunning evolution with {self.num_workers} parallel workers")
+            
             for gen in range(num_generations):
                 stats = self.evolve_generation()
                 print(f"Generation {stats.generation}: "
@@ -187,11 +216,15 @@ class LearningMode:
             print(f"\nThroughput:")
             print(f"Total evaluations: {total_evaluations}")
             print(f"Evaluations per second: {total_evaluations/total_time:.1f}")
+            print(f"Evaluations per second per worker: {total_evaluations/total_time/self.num_workers:.1f}")
             
         finally:
             # Clean up visualization
             if self.visualizer:
                 self.visualizer.close()
+            # Clean up process pool
+            self.pool.close()
+            self.pool.join()
         
         return self.stats_history
     
