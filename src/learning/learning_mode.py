@@ -1,8 +1,8 @@
 import numpy as np
 from typing import List, Type, Dict, Tuple, Optional
-from dataclasses import dataclass
 import json
 import os
+import time
 from datetime import datetime
 
 from ..scenarios.base import Scenario
@@ -83,6 +83,8 @@ class LearningMode:
     
     def evolve_generation(self) -> GenerationStats:
         """Evolve one generation and return statistics."""
+        start_time = time.time()
+        
         # Create scenario and simulation
         scenario = self.scenario_class()
         
@@ -99,7 +101,8 @@ class LearningMode:
             avg_fitness=np.mean(all_fitnesses),
             max_fitness=np.max(all_fitnesses),
             min_fitness=np.min(all_fitnesses),
-            best_weights=self.population[np.argmax(all_fitnesses)].get_weights()
+            best_weights=self.population[np.argmax(all_fitnesses)].get_weights(),
+            generation_time=time.time() - start_time
         )
         self.stats_history.append(stats)
         
@@ -156,7 +159,8 @@ class LearningMode:
                 print(f"Generation {stats.generation}: "
                       f"Avg={stats.avg_fitness:.3f}, "
                       f"Max={stats.max_fitness:.3f}, "
-                      f"Min={stats.min_fitness:.3f}")
+                      f"Min={stats.min_fitness:.3f}, "
+                      f"Time={stats.generation_time:.1f}s")
                 
                 if save_dir:
                     # Save generation stats
@@ -168,6 +172,22 @@ class LearningMode:
                     weights_file = os.path.join(save_dir, f"gen_{gen:04d}_best_weights.json")
                     with open(weights_file, 'w') as f:
                         json.dump(stats.best_weights, f, indent=2)
+            
+            # Print timing statistics
+            times = [s.generation_time for s in self.stats_history]
+            print("\nTiming Statistics:")
+            print(f"Average generation time: {np.mean(times):.1f}s")
+            print(f"Fastest generation: {np.min(times):.1f}s")
+            print(f"Slowest generation: {np.max(times):.1f}s")
+            print(f"Total evolution time: {np.sum(times):.1f}s")
+            
+            # Calculate throughput
+            total_evaluations = num_generations * self.population_size
+            total_time = np.sum(times)
+            print(f"\nThroughput:")
+            print(f"Total evaluations: {total_evaluations}")
+            print(f"Evaluations per second: {total_evaluations/total_time:.1f}")
+            
         finally:
             # Clean up visualization
             if self.visualizer:
