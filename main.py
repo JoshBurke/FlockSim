@@ -4,6 +4,7 @@ from src.utils.load_class import load_class
 from src.scenarios.free_roam import FreeRoamScenario
 from src.intelligences.flocking import FlockingIntelligence
 from src.core.simulation import Simulation
+from src.config import FLOCKING_DEFAULTS
 
 def main():
     parser = argparse.ArgumentParser(description='Run swarm simulation with different scenarios and intelligences')
@@ -26,24 +27,24 @@ def main():
                       help='Maximum speed of bots (default: 2.0)')
     parser.add_argument('--max-force', type=float, default=0.1,
                       help='Maximum force that can be applied to bots (default: 0.1)')
-    parser.add_argument('--perception-radius', type=float, default=60.0,
-                      help='How far bots can see other bots (default: 60.0)')
-    parser.add_argument('--separation-radius', type=float, default=25.0,
-                      help='Distance at which separation force starts (default: 25.0)')
+    parser.add_argument('--perception-radius', type=float, default=FLOCKING_DEFAULTS['perception_radius'],
+                      help=f'How far bots can see other bots (default: {FLOCKING_DEFAULTS["perception_radius"]})')
+    parser.add_argument('--separation-radius', type=float, default=FLOCKING_DEFAULTS['separation_radius'],
+                      help=f'Distance at which separation force starts (default: {FLOCKING_DEFAULTS["separation_radius"]})')
     parser.add_argument('--wall-detection-distance', type=float, default=50.0,
                       help='Distance at which bots start avoiding walls (default: 50.0)')
     
     # Flocking weights
-    parser.add_argument('--cohesion-weight', type=float, default=1.5,
-                      help='Weight of cohesion force (default: 1.5)')
-    parser.add_argument('--alignment-weight', type=float, default=3.0,
-                      help='Weight of alignment force - high for strong flock synchronization (default: 3.0)')
-    parser.add_argument('--separation-weight', type=float, default=0.8,
-                      help='Weight of separation force (default: 0.8)')
-    parser.add_argument('--wall-avoidance-weight', type=float, default=2.5,
-                      help='Weight of wall avoidance force (default: 2.5)')
-    parser.add_argument('--leader-bias', type=float, default=4.0,
-                      help='How much to favor bots in front - higher values create stronger leader following (default: 4.0)')
+    parser.add_argument('--cohesion-weight', type=float, default=FLOCKING_DEFAULTS['cohesion'],
+                      help=f'Weight of cohesion force (default: {FLOCKING_DEFAULTS["cohesion"]})')
+    parser.add_argument('--alignment-weight', type=float, default=FLOCKING_DEFAULTS['alignment'],
+                      help=f'Weight of alignment force - high for strong flock synchronization (default: {FLOCKING_DEFAULTS["alignment"]})')
+    parser.add_argument('--separation-weight', type=float, default=FLOCKING_DEFAULTS['separation'],
+                      help=f'Weight of separation force (default: {FLOCKING_DEFAULTS["separation"]})')
+    parser.add_argument('--wall-avoidance-weight', type=float, default=FLOCKING_DEFAULTS['wall_avoidance'],
+                      help=f'Weight of wall avoidance force (default: {FLOCKING_DEFAULTS["wall_avoidance"]})')
+    parser.add_argument('--leader-bias', type=float, default=FLOCKING_DEFAULTS['leader_bias'],
+                      help=f'How much to favor bots in front - higher values create stronger leader following (default: {FLOCKING_DEFAULTS["leader_bias"]})')
     
     args = parser.parse_args()
     

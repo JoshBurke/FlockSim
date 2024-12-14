@@ -2,6 +2,7 @@ import numpy as np
 from typing import List, Tuple, Dict
 from dataclasses import dataclass
 from .base import Intelligence
+from ..config import FLOCKING_DEFAULTS
 
 @dataclass
 class FlockingMetrics:
@@ -33,16 +34,16 @@ class FlockingIntelligence(Intelligence):
     """Implementation of flocking behavior with cohesion, alignment, separation, and wall avoidance."""
     
     def __init__(self, 
-                 cohesion_weight: float = 1.5,
-                 alignment_weight: float = 3.0,
-                 separation_weight: float = 0.8,
-                 wall_avoidance_weight: float = 2.5,
+                 cohesion_weight: float = FLOCKING_DEFAULTS['cohesion'],
+                 alignment_weight: float = FLOCKING_DEFAULTS['alignment'],
+                 separation_weight: float = FLOCKING_DEFAULTS['separation'],
+                 wall_avoidance_weight: float = FLOCKING_DEFAULTS['wall_avoidance'],
                  wall_detection_distance: float = 50.0,
-                 leader_bias: float = 4.0,
+                 leader_bias: float = FLOCKING_DEFAULTS['leader_bias'],
                  max_speed: float = 2.0,
                  max_force: float = 0.1,
-                 perception_radius: float = 60.0,
-                 separation_radius: float = 25.0):
+                 perception_radius: float = FLOCKING_DEFAULTS['perception_radius'],
+                 separation_radius: float = FLOCKING_DEFAULTS['separation_radius']):
         """Initialize flocking intelligence with configurable parameters.
         
         Args:

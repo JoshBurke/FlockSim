@@ -2,6 +2,10 @@
 
 A Python-based swarm intelligence simulator that supports multiple scenarios and pluggable bot intelligences. The system includes both direct simulation and evolutionary learning capabilities, with high-performance parallel evolution.
 
+![Flocking Demo](demo/flock.gif)
+
+![Evolution graph](demo/evo_graph.png)
+
 ## Features
 
 - Real-time visualization of swarm behavior
