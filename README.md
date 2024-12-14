@@ -1,6 +1,6 @@
 # OmniFlock
 
-A Python-based swarm intelligence simulator that supports multiple scenarios and pluggable bot intelligences. The system includes both direct simulation and evolutionary learning capabilities, with high-performance parallel evolution.
+A Python-based swarm intelligence simulator that supports multiple scenarios and pluggable bot intelligences. The system includes both direct simulation and evolutionary learning capabilities, with options for CPU-parallelized evolution.
 
 ![Flocking Demo](demo/flock.gif)
 
