@@ -11,8 +11,8 @@ A Python-based swarm intelligence simulator that supports multiple scenarios and
 - Real-time visualization of swarm behavior
 - Multiple bot intelligence types
 - Configurable scenarios
-- High-performance parallel evolution (8x faster with 8 cores!)
-- Progress visualization and tracking
+- High-performance parallel evolution (linear improvement in evolution speed with # of cores used)
+- Progress visualization and fitness/time tracking
 - Extensible architecture
 
 ## Requirements
