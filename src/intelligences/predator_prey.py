@@ -5,28 +5,30 @@ from .base import Intelligence
 class PredatorIntelligence(Intelligence):
     """Intelligence for predator bots that chase and catch prey."""
     
-    def __init__(self, max_speed: float = 2.0, max_force: float = 0.15, 
-                 perception_radius: float = 150.0, catch_radius: float = 20.0,
-                 sight_speed_ratio: float = 75.0):
-        """Initialize predator intelligence.
+    def __init__(self, max_speed: float = 2.0, max_force: float = 0.15,
+                 perception_radius: float = 150.0, separation_radius: float = 50.0,
+                 wall_detection_distance: float = 30.0, catch_radius: float = 20.0,
+                 sight_speed_ratio: float = 75.0, base_energy: float = 150.0,
+                 chase_weight: float = 0.4,
+                 separation_weight: float = 0.1,
+                 wall_avoidance_weight: float = 0.1):
+        """Initialize predator intelligence with configurable parameters.
         
-        The sight_speed_ratio determines how energy is allocated between sight and speed.
-        ratio = sight / speed, but both are derived from the ratio using a logarithmic function
-        to prevent extreme values.
-        
-        Energy allocation formula:
-        - Base energy = 150 (predator has more energy than prey)
-        - speed = base_energy / (1 + ln(ratio))
-        - sight = speed * ratio
-        
-        This creates a natural balance where:
-        - ratio = 1: speed = 150/1.0 = 150, sight = 150
-        - ratio = 10: speed = 150/3.3 ≈ 45, sight = 450
-        - ratio = 100: speed = 150/5.6 ≈ 27, sight = 2700
-        - ratio = 0.1: speed = 150/-1.3 ≈ 115, sight = 11.5
+        Args:
+            max_speed: Maximum speed
+            max_force: Maximum steering force
+            perception_radius: Base perception radius before sight/speed adjustment
+            separation_radius: Distance to maintain from other predators
+            wall_detection_distance: Distance to start avoiding walls
+            catch_radius: Distance at which prey is considered caught
+            sight_speed_ratio: Ratio between sight range and speed (evolvable)
+            base_energy: Total energy available to allocate between speed and sight
+            chase_weight: Weight for chasing prey
+            separation_weight: Weight for avoiding other predators
+            wall_avoidance_weight: Weight for avoiding walls
         """
         self.sight_speed_ratio = sight_speed_ratio
-        self.base_energy = 150.0  # Total energy available
+        self.base_energy = base_energy
         
         # Calculate speed and sight based on ratio
         derived_speed = self.base_energy / (1 + np.log(max(sight_speed_ratio, 0.1)))
@@ -34,29 +36,28 @@ class PredatorIntelligence(Intelligence):
         
         # Clamp values to reasonable ranges
         max_speed = min(max(derived_speed, 0.5), 4.0)
-        perception_radius = min(max(derived_sight, 20.0), 400.0)
+        adjusted_perception = min(max(derived_sight, 20.0), 400.0)
         
-        super().__init__(max_speed, max_force, perception_radius)
+        super().__init__(max_speed, max_force, adjusted_perception)
         self.catch_radius = catch_radius
-        self.color = 'darkred'  # Predator color
-        self.trail_color = 'red'  # Trail color for velocity indicator
+        self.color = 'darkred'
+        self.trail_color = 'red'
+        
+        # Store configurable parameters
+        self.separation_radius = separation_radius
+        self.wall_margin = wall_detection_distance
         self.weights = {
-            'chase': 0.4,  # Reduced from 1.0
-            'separation': 0.1,  # Reduced from 0.3
-            'wall_avoidance': 0.1  # Reduced from 0.3
+            'chase': chase_weight,
+            'separation': separation_weight,
+            'wall_avoidance': wall_avoidance_weight
         }
+        
         # Metrics for fitness calculation
         self.prey_caught = 0
         self.total_chase_distance = 0.0
-        self.time_without_target = 0  # Tracks time spent without a target
+        self.time_without_target = 0
         self.num_updates = 0
-        
-        # Constants
-        self.desired_separation = 50.0  # Distance to maintain from other predators
-        self.wall_margin = 30.0  # Distance to start avoiding walls
-        
-        # Target tracking
-        self.current_target = None  # (position, frames_ago)
+        self.current_target = None
     
     def calculate_move(self, position: np.ndarray, velocity: np.ndarray,
                       neighbors: List[Tuple[np.ndarray, np.ndarray]], 
@@ -104,7 +105,7 @@ class PredatorIntelligence(Intelligence):
             if distance > 0:  # Ignore self
                 if neighbor_index in predator_indices:
                     # Separation from other predators
-                    if distance < self.desired_separation:
+                    if distance < self.separation_radius:
                         separation_force -= to_other / (distance + 1e-6)
                 else:
                     # Potential prey found
@@ -196,27 +197,33 @@ class PreyIntelligence(Intelligence):
     """Intelligence for prey bots that try to evade predators."""
     
     def __init__(self, max_speed: float = 2.0, max_force: float = 0.1,
-                 perception_radius: float = 100.0,
-                 sight_speed_ratio: float = 50.0):
-        """Initialize prey intelligence.
+                 perception_radius: float = 100.0, separation_radius: float = 30.0,
+                 wall_detection_distance: float = 50.0, close_call_distance: float = 30.0,
+                 sight_speed_ratio: float = 50.0, base_energy: float = 100.0,
+                 evade_weight: float = 0.4,
+                 cohesion_weight: float = 0.1,
+                 separation_weight: float = 0.3,
+                 alignment_weight: float = 0.2,
+                 wall_avoidance_weight: float = 0.1):
+        """Initialize prey intelligence with configurable parameters.
         
-        The sight_speed_ratio determines how energy is allocated between sight and speed.
-        ratio = sight / speed, but both are derived from the ratio using a logarithmic function
-        to prevent extreme values.
-        
-        Energy allocation formula:
-        - Base energy = 100 (prey has less energy than predator)
-        - speed = base_energy / (1 + ln(ratio))
-        - sight = speed * ratio
-        
-        This creates a natural balance where:
-        - ratio = 1: speed = 100/1.0 = 100, sight = 100
-        - ratio = 10: speed = 100/3.3 ≈ 30, sight = 300
-        - ratio = 100: speed = 100/5.6 ≈ 18, sight = 1800
-        - ratio = 0.1: speed = 100/-1.3 ≈ 77, sight = 7.7
+        Args:
+            max_speed: Maximum speed
+            max_force: Maximum steering force
+            perception_radius: Base perception radius before sight/speed adjustment
+            separation_radius: Distance to maintain from other prey
+            wall_detection_distance: Distance to start avoiding walls
+            close_call_distance: Distance that counts as a close call with predator
+            sight_speed_ratio: Ratio between sight range and speed (evolvable)
+            base_energy: Total energy available to allocate between speed and sight
+            evade_weight: Weight for evading predators
+            cohesion_weight: Weight for staying with other prey
+            separation_weight: Weight for avoiding other prey
+            alignment_weight: Weight for matching velocity with nearby prey
+            wall_avoidance_weight: Weight for avoiding walls
         """
         self.sight_speed_ratio = sight_speed_ratio
-        self.base_energy = 100.0  # Total energy available
+        self.base_energy = base_energy
         
         # Calculate speed and sight based on ratio
         derived_speed = self.base_energy / (1 + np.log(max(sight_speed_ratio, 0.1)))
@@ -224,30 +231,32 @@ class PreyIntelligence(Intelligence):
         
         # Clamp values to reasonable ranges
         max_speed = min(max(derived_speed, 0.5), 3.0)
-        perception_radius = min(max(derived_sight, 20.0), 300.0)
+        adjusted_perception = min(max(derived_sight, 20.0), 300.0)
         
-        super().__init__(max_speed, max_force, perception_radius)
-        self.color = 'lightblue'  # Prey color
-        self.trail_color = 'blue'  # Trail color for velocity indicator
+        super().__init__(max_speed, max_force, adjusted_perception)
+        self.color = 'lightblue'
+        self.trail_color = 'blue'
+        
+        # Store configurable parameters
+        self.desired_separation = separation_radius
+        self.wall_margin = wall_detection_distance
+        self.close_call_distance = close_call_distance
+        self.min_cohesion_distance = separation_radius * 0.67  # 2/3 of separation radius
+        
         self.weights = {
-            'evade': 0.4,      # Reduced from 1.0
-            'cohesion': 0.1,   # Reduced from 0.3
-            'separation': 0.3,  # Reduced from 0.8
-            'alignment': 0.2,   # Reduced from 0.5
-            'wall_avoidance': 0.1  # Reduced from 0.3
+            'evade': evade_weight,
+            'cohesion': cohesion_weight,
+            'separation': separation_weight,
+            'alignment': alignment_weight,
+            'wall_avoidance': wall_avoidance_weight
         }
+        
         # Metrics for fitness calculation
         self.survival_time = 0
-        self.close_calls = 0  # Number of times a predator got very close
+        self.close_calls = 0
         self.total_distance = 0.0
-        self.avg_group_size = 0.0  # Average size of prey group it belongs to
-        self.num_updates = 0  # For averaging
-        
-        # Constants
-        self.close_call_distance = 30.0  # Distance that counts as a close call
-        self.desired_separation = 30.0  # Distance to maintain from other prey (increased from 25.0)
-        self.min_cohesion_distance = 20.0  # Minimum distance for cohesion to take effect
-        self.wall_margin = 50.0  # Distance to start avoiding walls
+        self.avg_group_size = 0.0
+        self.num_updates = 0
     
     def calculate_move(self, position: np.ndarray, velocity: np.ndarray,
                       neighbors: List[Tuple[np.ndarray, np.ndarray]], 

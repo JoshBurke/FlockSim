@@ -54,6 +54,32 @@ def main():
     parser.add_argument('--leader-bias', type=float, default=FLOCKING_DEFAULTS['leader_bias'],
                       help=f'How much to favor bots in front (default: {FLOCKING_DEFAULTS["leader_bias"]})')
     
+    # Predator-prey specific parameters
+    parser.add_argument('--predator-sight-ratio', type=float, default=75.0,
+                      help='Sight/speed ratio for predators (default: 75.0)')
+    parser.add_argument('--prey-sight-ratio', type=float, default=50.0,
+                      help='Sight/speed ratio for prey (default: 50.0)')
+    parser.add_argument('--predator-energy', type=float, default=150.0,
+                      help='Base energy for predators (default: 150.0)')
+    parser.add_argument('--prey-energy', type=float, default=100.0,
+                      help='Base energy for prey (default: 100.0)')
+    parser.add_argument('--separation-radius', type=float, default=30.0,
+                      help='Distance to maintain from other bots (default: 30.0)')
+    parser.add_argument('--close-call-distance', type=float, default=30.0,
+                      help='Distance that counts as a close call for prey (default: 30.0)')
+    
+    # Add behavior weight parameters
+    parser.add_argument('--chase-weight', type=float, default=0.4,
+                      help='Weight for predator chase behavior (default: 0.4)')
+    parser.add_argument('--evade-weight', type=float, default=0.4,
+                      help='Weight for prey evade behavior (default: 0.4)')
+    parser.add_argument('--prey-cohesion-weight', type=float, default=0.1,
+                      help='Weight for prey cohesion behavior (default: 0.1)')
+    parser.add_argument('--prey-alignment-weight', type=float, default=0.2,
+                      help='Weight for prey alignment behavior (default: 0.2)')
+    parser.add_argument('--prey-separation-weight', type=float, default=0.3,
+                      help='Weight for prey separation behavior (default: 0.3)')
+    
     args = parser.parse_args()
     
     # Create scenario
@@ -78,15 +104,41 @@ def main():
         def create_intelligence(bot_index: int) -> Intelligence:
             if bot_index in scenario.predator_indices:
                 return PredatorIntelligence(
-                    max_speed=args.max_speed * 1.25,  # Predators are faster
-                    max_force=args.max_force * 1.5,
-                    perception_radius=args.perception_radius * 2.0  # Predators see twice as far
+                    # Speed and force parameters
+                    max_speed=args.max_speed,
+                    max_force=args.max_force,
+                    # Distance parameters
+                    perception_radius=args.perception_radius,
+                    separation_radius=args.separation_radius,
+                    wall_detection_distance=args.wall_detection_distance,
+                    catch_radius=20.0,  # Fixed for now
+                    # Energy and ratio parameters
+                    sight_speed_ratio=args.predator_sight_ratio,
+                    base_energy=args.predator_energy,
+                    # Behavior weights
+                    chase_weight=args.chase_weight,
+                    separation_weight=args.separation_weight,
+                    wall_avoidance_weight=args.wall_avoidance_weight
                 )
             else:
                 return PreyIntelligence(
+                    # Speed and force parameters
                     max_speed=args.max_speed,
                     max_force=args.max_force,
-                    perception_radius=args.perception_radius  # Prey have base perception
+                    # Distance parameters
+                    perception_radius=args.perception_radius,
+                    separation_radius=args.separation_radius,
+                    wall_detection_distance=args.wall_detection_distance,
+                    close_call_distance=args.close_call_distance,
+                    # Energy and ratio parameters
+                    sight_speed_ratio=args.prey_sight_ratio,
+                    base_energy=args.prey_energy,
+                    # Behavior weights
+                    evade_weight=args.evade_weight,
+                    cohesion_weight=args.prey_cohesion_weight,
+                    separation_weight=args.prey_separation_weight,
+                    alignment_weight=args.prey_alignment_weight,
+                    wall_avoidance_weight=args.wall_avoidance_weight
                 )
     else:
         scenario = scenario_class(
