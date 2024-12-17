@@ -7,7 +7,7 @@ class PredatorPreyScenario(Scenario):
     
     def __init__(self, width: float = 800, height: float = 600, enable_wrapping: bool = False, 
                  predator_ratio: float = 0.2, catch_radius: float = 10.0,
-                 max_time: int = 1000, win_threshold: float = 0.75):
+                 max_time: int = 1000, win_threshold: float = 0.90):
         """Initialize predator vs prey scenario.
         
         Args:

@@ -27,8 +27,8 @@ def main():
                       help='Ratio of predators to total bots (default: 0.167 - roughly 1:5 predator:prey)')
     parser.add_argument('--max-time', type=int, default=1000,
                       help='Maximum simulation frames (default: 1000)')
-    parser.add_argument('--win-threshold', type=float, default=0.75,
-                      help='Ratio of prey that must be caught for predators to win (default: 0.75)')
+    parser.add_argument('--win-threshold', type=float, default=0.90,
+                      help='Ratio of prey that must be caught for predators to win (default: 0.90)')
     
     # Bot parameters
     parser.add_argument('--max-speed', type=float, default=2.0,
