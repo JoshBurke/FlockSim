@@ -12,6 +12,8 @@ class Intelligence(ABC):
         self.max_force = max_force
         self.perception_radius = perception_radius
         self.weights: Dict[str, float] = {}  # To be populated by subclasses
+        self.color = 'blue'  # Default color, should be overridden by subclasses
+        self.trail_color = 'red'  # Color for velocity/direction indicator
         
     @abstractmethod
     def calculate_move(self, 
