@@ -55,19 +55,15 @@ class Bot:
             # Check for collisions with boundaries and adjust position and velocity
             for i in range(2):
                 if new_position[i] < 0:
-                    # Calculate how far past the boundary we would have gone
-                    overshoot = -new_position[i]
                     # Place exactly at boundary
                     new_position[i] = 0
-                    # Reverse velocity component and reduce by the fraction of movement that was stopped
-                    self.velocity[i] = -self.velocity[i] * (1.0 - overshoot/abs(self.velocity[i]))
+                    # Simply reverse velocity component with a small damping factor
+                    self.velocity[i] = -self.velocity[i] * 0.8
                 elif new_position[i] >= world_size[i]:
-                    # Calculate how far past the boundary we would have gone
-                    overshoot = new_position[i] - world_size[i]
                     # Place exactly at boundary
                     new_position[i] = world_size[i]
-                    # Reverse velocity component and reduce by the fraction of movement that was stopped
-                    self.velocity[i] = -self.velocity[i] * (1.0 - overshoot/abs(self.velocity[i]))
+                    # Simply reverse velocity component with a small damping factor
+                    self.velocity[i] = -self.velocity[i] * 0.8
                     
         self.position = new_position
         

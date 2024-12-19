@@ -6,7 +6,7 @@ class PredatorIntelligence(Intelligence):
     """Intelligence for predator bots that chase and catch prey."""
     
     def __init__(self, max_speed: float = 2.0, max_force: float = 0.15,
-                 perception_radius: float = 150.0, separation_radius: float = 50.0,
+                 perception_radius: float = 400.0, separation_radius: float = 50.0,
                  wall_detection_distance: float = 30.0, catch_radius: float = 20.0,
                  sight_speed_ratio: float = 75.0, base_energy: float = 150.0,
                  chase_weight: float = 0.4,
@@ -174,30 +174,36 @@ class PredatorIntelligence(Intelligence):
         Returns:
             float: Fitness score between 0 and 1
         """
-        if self.num_updates == 0:
-            return 0.0
+        try:
+            if self.num_updates == 0:
+                return 0.0
+                
+            # Normalize metrics with safety checks
+            catch_score = min(1.0, self.prey_caught / max(1, 3))  # Cap at 3 catches, avoid div by 0
             
-        # Normalize metrics
-        catch_score = min(1.0, self.prey_caught / 3.0)  # Cap at 3 catches
-        
-        # Penalize time spent without a target
-        search_efficiency = max(0.0, 1.0 - (self.time_without_target / self.num_updates))
-        
-        # Consider chase distance (lower is better, as it means more direct catches)
-        distance_score = 1.0 / (1.0 + self.total_chase_distance / self.num_updates)
-        
-        # Combine scores with weights
-        fitness = (0.6 * catch_score +
-                  0.2 * search_efficiency +
-                  0.2 * distance_score)
-        
-        return max(0.0, min(1.0, fitness))  # Ensure between 0 and 1
+            # Penalize time spent without a target
+            search_efficiency = max(0.0, 1.0 - (self.time_without_target / max(1, self.num_updates)))
+            
+            # Consider chase distance (lower is better, as it means more direct catches)
+            avg_chase_distance = self.total_chase_distance / max(1, self.num_updates)
+            distance_score = 1.0 / (1.0 + avg_chase_distance)  # Will never be 0 due to +1
+            
+            # Combine scores with weights
+            fitness = (0.6 * catch_score +
+                      0.2 * search_efficiency +
+                      0.2 * distance_score)
+            
+            return max(0.0, min(1.0, fitness))  # Ensure between 0 and 1
+            
+        except Exception as e:
+            print(f"Error calculating predator fitness: {str(e)}")
+            return 0.0  # Return minimum fitness on error
 
 class PreyIntelligence(Intelligence):
     """Intelligence for prey bots that try to evade predators."""
     
     def __init__(self, max_speed: float = 2.0, max_force: float = 0.1,
-                 perception_radius: float = 100.0, separation_radius: float = 30.0,
+                 perception_radius: float = 300.0, separation_radius: float = 30.0,
                  wall_detection_distance: float = 50.0, close_call_distance: float = 30.0,
                  sight_speed_ratio: float = 50.0, base_energy: float = 100.0,
                  evade_weight: float = 0.4,
@@ -401,19 +407,27 @@ class PreyIntelligence(Intelligence):
         Returns:
             float: Fitness score between 0 and 1
         """
-        # Normalize metrics
-        survival_score = min(1.0, self.survival_time / 1000.0)  # Cap at 1000 frames
-        
-        # Penalize close calls but don't let them dominate
-        close_call_penalty = max(0.0, 1.0 - (self.close_calls * 0.1))
-        
-        # Reward staying in groups (safety in numbers)
-        group_score = min(1.0, self.avg_group_size / 5.0)  # Cap at group size of 5
-        
-        # Combine scores with weights
-        fitness = (0.5 * survival_score + 
-                  0.3 * close_call_penalty +
-                  0.2 * group_score)
-        
-        return max(0.0, min(1.0, fitness))  # Ensure between 0 and 1
+        try:
+            if self.num_updates == 0:
+                return 0.0
+                
+            # Normalize metrics with safety checks
+            survival_score = min(1.0, self.survival_time / max(1, 1000.0))  # Cap at 1000 frames
+            
+            # Penalize close calls but don't let them dominate
+            close_call_penalty = max(0.0, 1.0 - (self.close_calls * 0.1))
+            
+            # Reward staying in groups (safety in numbers)
+            group_score = min(1.0, self.avg_group_size / max(1, 5.0))  # Cap at group size of 5
+            
+            # Combine scores with weights
+            fitness = (0.5 * survival_score + 
+                      0.3 * close_call_penalty +
+                      0.2 * group_score)
+            
+            return max(0.0, min(1.0, fitness))  # Ensure between 0 and 1
+            
+        except Exception as e:
+            print(f"Error calculating prey fitness: {str(e)}")
+            return 0.0  # Return minimum fitness on error
   

@@ -97,7 +97,8 @@ def main():
             enable_wrapping=args.wrap,
             predator_ratio=args.predator_ratio,
             max_time=args.max_time,
-            win_threshold=args.win_threshold
+            win_threshold=args.win_threshold,
+            verbose=True  # Keep verbose output for regular simulations
         )
         
         # Create intelligence factory for predator-prey scenario
