@@ -7,7 +7,7 @@ class PredatorPreyScenario(Scenario):
     
     def __init__(self, width: float = 800, height: float = 600, enable_wrapping: bool = False, 
                  predator_ratio: float = 0.2, catch_radius: float = 10.0,
-                 max_time: int = 1000, win_threshold: float = 0.90,
+                 max_time: int = 1000, win_threshold: float = 1.0,
                  verbose: bool = True):
         """Initialize predator vs prey scenario.
         
@@ -127,7 +127,7 @@ class PredatorPreyScenario(Scenario):
         is_complete = (caught_ratio >= self.win_threshold or  # Predators win
                       self.current_time >= self.max_time)    # Time's up
         
-        if is_complete and self.verbose:
+        if is_complete:
             if caught_ratio >= self.win_threshold:
                 print(f"\nPredators win! Caught {len(self.caught_prey)}/{total_prey} prey ({caught_ratio*100:.1f}%)")
             else:

@@ -8,56 +8,47 @@ class PredatorIntelligence(Intelligence):
     def __init__(self, max_speed: float = 2.0, max_force: float = 0.15,
                  perception_radius: float = 400.0, separation_radius: float = 50.0,
                  wall_detection_distance: float = 30.0, catch_radius: float = 20.0,
-                 sight_speed_ratio: float = 75.0, base_energy: float = 150.0,
+                 sight_speed_ratio: float = 15.0, base_energy: float = 150.0,
                  chase_weight: float = 0.4,
                  separation_weight: float = 0.1,
                  wall_avoidance_weight: float = 0.1):
-        """Initialize predator intelligence with configurable parameters.
+        """Initialize predator intelligence."""
+        # Initialize base parameters
+        super().__init__(max_speed, max_force, perception_radius)
         
-        Args:
-            max_speed: Maximum speed
-            max_force: Maximum steering force
-            perception_radius: Base perception radius before sight/speed adjustment
-            separation_radius: Distance to maintain from other predators
-            wall_detection_distance: Distance to start avoiding walls
-            catch_radius: Distance at which prey is considered caught
-            sight_speed_ratio: Ratio between sight range and speed (evolvable)
-            base_energy: Total energy available to allocate between speed and sight
-            chase_weight: Weight for chasing prey
-            separation_weight: Weight for avoiding other predators
-            wall_avoidance_weight: Weight for avoiding walls
-        """
-        self.sight_speed_ratio = sight_speed_ratio
+        # Store non-weight parameters
         self.base_energy = base_energy
-        
-        # Calculate speed and sight based on ratio
-        derived_speed = self.base_energy / (1 + np.log(max(sight_speed_ratio, 0.1)))
-        derived_sight = derived_speed * sight_speed_ratio
-        
-        # Clamp values to reasonable ranges
-        max_speed = min(max(derived_speed, 0.5), 4.0)
-        adjusted_perception = min(max(derived_sight, 20.0), 400.0)
-        
-        super().__init__(max_speed, max_force, adjusted_perception)
         self.catch_radius = catch_radius
+        self.separation_radius = separation_radius
+        self.wall_margin = wall_detection_distance
         self.color = 'darkred'
         self.trail_color = 'red'
         
-        # Store configurable parameters
-        self.separation_radius = separation_radius
-        self.wall_margin = wall_detection_distance
-        self.weights = {
+        # Set initial weights (will trigger _update_derived_values)
+        self.set_weights({
             'chase': chase_weight,
             'separation': separation_weight,
-            'wall_avoidance': wall_avoidance_weight
-        }
+            'wall_avoidance': wall_avoidance_weight,
+            'sight_speed_ratio': sight_speed_ratio
+        })
         
-        # Metrics for fitness calculation
+        # Initialize metrics
         self.prey_caught = 0
         self.total_chase_distance = 0.0
         self.time_without_target = 0
         self.num_updates = 0
         self.current_target = None
+    
+    def _update_derived_values(self) -> None:
+        """Update speed and perception based on sight/speed ratio."""
+        if 'sight_speed_ratio' in self.weights:
+            # Calculate speed and sight based on evolved ratio
+            derived_speed = self.base_energy / (1 + np.log(max(self.weights['sight_speed_ratio'], 0.1)))
+            derived_sight = derived_speed * self.weights['sight_speed_ratio']
+            
+            # Update base class attributes with clamped values
+            self.max_speed = min(max(derived_speed, 0.5), 4.0)
+            self.perception_radius = min(max(derived_sight, 20.0), 400.0)
     
     def calculate_move(self, position: np.ndarray, velocity: np.ndarray,
                       neighbors: List[Tuple[np.ndarray, np.ndarray]], 
@@ -145,7 +136,7 @@ class PredatorIntelligence(Intelligence):
                 magnitude = np.linalg.norm(force)
                 if magnitude > 0:
                     force = force / magnitude
-                # Apply weight and add to list
+                # Apply weight from evolved weights dictionary
                 forces.append(force * self.weights[name])
         
         # Sum all forces
@@ -205,64 +196,52 @@ class PreyIntelligence(Intelligence):
     def __init__(self, max_speed: float = 2.0, max_force: float = 0.1,
                  perception_radius: float = 300.0, separation_radius: float = 30.0,
                  wall_detection_distance: float = 50.0, close_call_distance: float = 30.0,
-                 sight_speed_ratio: float = 50.0, base_energy: float = 100.0,
+                 sight_speed_ratio: float = 12.0, base_energy: float = 100.0,
                  evade_weight: float = 0.4,
                  cohesion_weight: float = 0.1,
                  separation_weight: float = 0.3,
                  alignment_weight: float = 0.2,
                  wall_avoidance_weight: float = 0.1):
-        """Initialize prey intelligence with configurable parameters.
+        """Initialize prey intelligence."""
+        # Initialize base parameters
+        super().__init__(max_speed, max_force, perception_radius)
         
-        Args:
-            max_speed: Maximum speed
-            max_force: Maximum steering force
-            perception_radius: Base perception radius before sight/speed adjustment
-            separation_radius: Distance to maintain from other prey
-            wall_detection_distance: Distance to start avoiding walls
-            close_call_distance: Distance that counts as a close call with predator
-            sight_speed_ratio: Ratio between sight range and speed (evolvable)
-            base_energy: Total energy available to allocate between speed and sight
-            evade_weight: Weight for evading predators
-            cohesion_weight: Weight for staying with other prey
-            separation_weight: Weight for avoiding other prey
-            alignment_weight: Weight for matching velocity with nearby prey
-            wall_avoidance_weight: Weight for avoiding walls
-        """
-        self.sight_speed_ratio = sight_speed_ratio
+        # Store non-weight parameters
         self.base_energy = base_energy
-        
-        # Calculate speed and sight based on ratio
-        derived_speed = self.base_energy / (1 + np.log(max(sight_speed_ratio, 0.1)))
-        derived_sight = derived_speed * sight_speed_ratio
-        
-        # Clamp values to reasonable ranges
-        max_speed = min(max(derived_speed, 0.5), 3.0)
-        adjusted_perception = min(max(derived_sight, 20.0), 300.0)
-        
-        super().__init__(max_speed, max_force, adjusted_perception)
-        self.color = 'lightblue'
-        self.trail_color = 'blue'
-        
-        # Store configurable parameters
         self.desired_separation = separation_radius
         self.wall_margin = wall_detection_distance
         self.close_call_distance = close_call_distance
-        self.min_cohesion_distance = separation_radius * 0.67  # 2/3 of separation radius
+        self.min_cohesion_distance = separation_radius * 0.67
+        self.color = 'lightblue'
+        self.trail_color = 'blue'
         
-        self.weights = {
+        # Set initial weights (will trigger _update_derived_values)
+        self.set_weights({
             'evade': evade_weight,
             'cohesion': cohesion_weight,
             'separation': separation_weight,
             'alignment': alignment_weight,
-            'wall_avoidance': wall_avoidance_weight
-        }
+            'wall_avoidance': wall_avoidance_weight,
+            'sight_speed_ratio': sight_speed_ratio
+        })
         
-        # Metrics for fitness calculation
+        # Initialize metrics
         self.survival_time = 0
         self.close_calls = 0
         self.total_distance = 0.0
         self.avg_group_size = 0.0
         self.num_updates = 0
+    
+    def _update_derived_values(self) -> None:
+        """Update speed and perception based on sight/speed ratio."""
+        if 'sight_speed_ratio' in self.weights:
+            # Calculate speed and sight based on evolved ratio
+            derived_speed = self.base_energy / (1 + np.log(max(self.weights['sight_speed_ratio'], 0.1)))
+            derived_sight = derived_speed * self.weights['sight_speed_ratio']
+            
+            # Update base class attributes with clamped values
+            self.max_speed = min(max(derived_speed, 0.5), 3.0)
+            self.perception_radius = min(max(derived_sight, 20.0), 300.0)
     
     def calculate_move(self, position: np.ndarray, velocity: np.ndarray,
                       neighbors: List[Tuple[np.ndarray, np.ndarray]], 
@@ -375,7 +354,7 @@ class PreyIntelligence(Intelligence):
                 magnitude = np.linalg.norm(force)
                 if magnitude > 0:
                     force = force / magnitude
-                # Apply weight and add to list
+                # Apply weight from evolved weights dictionary
                 forces.append(force * self.weights[name])
         
         # Sum all forces

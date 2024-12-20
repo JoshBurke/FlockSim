@@ -35,8 +35,14 @@ class Simulation:
         self.ax.set_xticks([])
         self.ax.set_yticks([])
         
+        self.anim = None
+        self.is_running = True  # Track if simulation should continue
+    
     def update(self, frame):
         """Update simulation state and visualization."""
+        if not self.is_running:
+            return False  # Stop animation if we're not running
+            
         self.ax.clear()
         self.ax.set_xlim(0, self.world_size[0])
         self.ax.set_ylim(0, self.world_size[1])
@@ -86,9 +92,23 @@ class Simulation:
         velocities = [bot.velocity for bot in self.bots]
         if self.scenario.check_completion(positions, velocities):
             print("Scenario completed!")
-            plt.close()
+            self.is_running = False  # Signal to stop
+            return False  # Stop animation
+    
+    def cleanup(self, event=None):
+        """Clean up animation resources."""
+        self.is_running = False
+        if self.anim is not None and self.anim.event_source is not None:
+            self.anim.event_source.stop()
+        self.anim = None
     
     def run(self, frames=200):
         """Run the simulation animation."""
-        anim = FuncAnimation(self.fig, self.update, frames=frames, interval=50)
-        plt.show() 
+        # Connect the cleanup handler to window close event
+        self.fig.canvas.mpl_connect('close_event', self.cleanup)
+        
+        self.anim = FuncAnimation(self.fig, self.update, frames=frames, interval=50)
+        plt.show()
+        
+        # Final cleanup after window closes
+        self.cleanup()

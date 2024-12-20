@@ -77,8 +77,9 @@ def _evaluate_combination(args) -> Dict[str, float]:
         return cleaned_results
         
     except Exception as e:
-        print(f"Error in evaluation: {str(e)}")
-        # Return penalty score for the evaluated individual
+        import traceback
+        print(f"Error in evaluation:")
+        print(traceback.format_exc())
         return {
             pop_name: [-1000.0]
             for pop_name in intelligence_instances.keys()

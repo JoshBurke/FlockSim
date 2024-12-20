@@ -6,15 +6,15 @@ from dataclasses import dataclass
 class Intelligence(ABC):
     """Base class for bot intelligence implementations."""
     
-    def __init__(self, max_speed: float = 2.0, max_force: float = 0.1, perception_radius: float = 50.0):
-        """Initialize intelligence with configurable parameters."""
+    def __init__(self, max_speed: float = 2.0, max_force: float = 0.1, perception_radius: float = 100.0):
+        """Initialize intelligence with basic parameters."""
         self.max_speed = max_speed
         self.max_force = max_force
         self.perception_radius = perception_radius
-        self.weights: Dict[str, float] = {}  # To be populated by subclasses
-        self.color = 'blue'  # Default color, should be overridden by subclasses
-        self.trail_color = 'red'  # Color for velocity/direction indicator
-        
+        self.weights = {}  # Will be populated by subclasses
+        self.color = 'gray'
+        self.trail_color = 'lightgray'
+    
     @abstractmethod
     def calculate_move(self, 
                       position: np.ndarray,
@@ -63,13 +63,21 @@ class Intelligence(ABC):
                 new_weights[key] = other.weights[key]
         return new_weights
     
-    def set_weights(self, weights: Dict[str, float]):
-        """Set the bot's weights."""
-        self.weights.update(weights)
+    def set_weights(self, weights: Dict[str, float]) -> None:
+        """Set weights and recalculate any derived values."""
+        self.weights = weights.copy()
+        self._update_derived_values()
     
     def get_weights(self) -> Dict[str, float]:
-        """Get the bot's current weights."""
+        """Get current weights."""
         return self.weights.copy()
+    
+    def _update_derived_values(self) -> None:
+        """Update any values that are derived from weights.
+        
+        Override in subclasses that have derived values.
+        """
+        pass
     
     def set_parameters(self, **kwargs):
         """Update intelligence parameters."""
